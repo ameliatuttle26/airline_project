@@ -202,6 +202,7 @@ def register_staff():
         username = form.get("username")
         pw = form.get("password")
         airline_name = form.get("airline_name")
+        reg_code = form.get("reg_code")
 
         # required fields
         if not username or not pw or not airline_name:
@@ -212,53 +213,64 @@ def register_staff():
         if airline_name not in airlines:
             flash("Selected airline does not exist. Please choose from the list.")
             return redirect(url_for("register_staff"))
-        
-        reg_code = form.get("reg_code")
-
-        with conn.cursor() as cur:
-            cur.execute("SELECT staff_reg_code FROM airline WHERE airline_name=%s", (airline_name,))
-            row = cur.fetchone()
-
-        if not row:
-            flash("Invalid airline selected.")
-            return redirect(url_for("register_staff"))
-
-        if row['staff_reg_code'] != reg_code:
-            flash("Invalid registration code.")
-            return redirect(url_for("register_staff"))
-
-
-
         conn = get_db_connection()
         try:
             with conn.cursor() as cur:
-                # avoid duplicates
-                cur.execute("SELECT username FROM airline_staff WHERE username=%s", (username,))
+
+                #validate registration
+                cur.execute(
+                    """
+                    SELECT 1
+                    FROM airline
+                    WHERE airline_name = %s
+                      AND staff_reg_hash = SHA2(%s, 256)
+                    """,
+                    (airline_name, reg_code),
+                )
+
+                if not cur.fetchone():
+                    flash("Invalid registration code.")
+                    return redirect(url_for("register_staff"))
+
+                # check if username already exists
+                cur.execute(
+                    "SELECT username FROM airline_staff WHERE username=%s",
+                    (username,)
+                )
                 if cur.fetchone():
                     flash("Staff user already exists.")
                     return redirect(url_for("register_staff"))
 
-                hashed = generate_password_hash(pw)
-                role = form.get("role", "admin")  # admin / operator / both
+                # insert new staff member
+                hashed_pw = generate_password_hash(pw)
+                role = form.get("role", "admin")  # default to admin if not provided
 
-                cur.execute("""
+                cur.execute(
+                    """
                     INSERT INTO airline_staff
                     (username, password_hash, first_name, last_name, date_of_birth,
                      airline_name, role)
                     VALUES (%s,%s,%s,%s,%s,%s,%s)
-                """, (
-                    username, hashed,
-                    form.get("first_name"), form.get("last_name"),
-                    form.get("date_of_birth"), airline_name, role
-                ))
+                    """,
+                    (
+                        username,
+                        hashed_pw,
+                        form.get("first_name"),
+                        form.get("last_name"),
+                        form.get("date_of_birth"),
+                        airline_name,
+                        role,
+                    )
+                )
 
-            flash("Staff registered. Please log in.")
-            return redirect(url_for("login"))
+                flash("Staff registered successfully. Please log in.")
+                return redirect(url_for("login"))
+
         finally:
             conn.close()
 
     return render_template("register_staff.html", airlines=airlines)
-
+        
 
 # Login
 @app.route("/login", methods=["GET", "POST"])
