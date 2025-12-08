@@ -515,6 +515,7 @@ def customer_search_flights():
 
 
 # Purchase (customer buys)
+# Purchase (customer buys)
 @app.route("/customer/purchase/<airline_name>/<int:flight_num>", methods=["GET", "POST"])
 @login_required("customer")
 def customer_purchase(airline_name, flight_num):
@@ -527,7 +528,21 @@ def customer_purchase(airline_name, flight_num):
 
         try:
             with conn.cursor() as cur:
-                # flight info
+
+                # prevent duplicate purchase for same flight
+                cur.execute("""
+                    SELECT COUNT(*) AS cnt
+                    FROM ticket t
+                    JOIN purchases p USING(ticket_id)
+                    WHERE p.customer_email = %s
+                      AND t.airline_name = %s
+                      AND t.flight_num = %s
+                """, (customer_email, airline_name, flight_num))
+                if cur.fetchone()["cnt"] > 0:
+                    flash("You already purchased a ticket for this flight.")
+                    return redirect(url_for("customer_dashboard"))
+
+                #get flight info
                 cur.execute("""
                     SELECT airplane_id, base_price
                     FROM flight
@@ -541,7 +556,7 @@ def customer_purchase(airline_name, flight_num):
                 airplane_id = flight["airplane_id"]
                 base_price = flight["base_price"]
 
-                # seat class data
+                # seat class info
                 cur.execute("""
                     SELECT seat_capacity
                     FROM seat_class
@@ -556,7 +571,7 @@ def customer_purchase(airline_name, flight_num):
 
                 capacity = sc["seat_capacity"]
 
-                # seats sold in that class
+                # count seats sold of that class on this flight
                 cur.execute("""
                     SELECT COUNT(*) AS sold
                     FROM ticket
@@ -571,23 +586,26 @@ def customer_purchase(airline_name, flight_num):
                     flash("Sorry, no seats left in this class.")
                     return redirect(url_for("customer_dashboard"))
 
-                # pricing
+                # price calculation
                 multiplier = 1.0
                 if seat_class_id == 2:
                     multiplier = 1.5
                 elif seat_class_id == 3:
                     multiplier = 2.0
+
                 purchase_price = float(base_price) * multiplier
 
-                # next ticket id
+                # generate ticket id
                 cur.execute("SELECT COALESCE(MAX(ticket_id),0) + 1 AS next_id FROM ticket")
                 ticket_id = cur.fetchone()["next_id"]
 
+                # insert ticket
                 cur.execute("""
                     INSERT INTO ticket (ticket_id, airline_name, flight_num, airplane_id, seat_class_id)
                     VALUES (%s,%s,%s,%s,%s)
                 """, (ticket_id, airline_name, flight_num, airplane_id, seat_class_id))
 
+                # insert purchase record
                 cur.execute("""
                     INSERT INTO purchases (ticket_id, customer_email, purchase_date, purchase_price)
                     VALUES (%s,%s,%s,%s)
@@ -595,10 +613,11 @@ def customer_purchase(airline_name, flight_num):
 
                 flash("Your ticket has been purchased!")
                 return redirect(url_for("customer_dashboard"))
+
         finally:
             conn.close()
 
-    #GET → show seat classes
+    # GET → Show seat classes
     try:
         with conn.cursor() as cur:
             cur.execute("""
@@ -612,12 +631,14 @@ def customer_purchase(airline_name, flight_num):
                 return redirect(url_for("customer_dashboard"))
 
             airplane_id = flight["airplane_id"]
+
             cur.execute("""
                 SELECT seat_class_id, seat_capacity
                 FROM seat_class
                 WHERE airline_name=%s AND airplane_id=%s
             """, (airline_name, airplane_id))
             seat_classes = cur.fetchall()
+
     finally:
         conn.close()
 
@@ -627,6 +648,7 @@ def customer_purchase(airline_name, flight_num):
         flight_num=flight_num,
         seat_classes=seat_classes
     )
+
 
 
 # View all purchased flights
