@@ -11,12 +11,31 @@
         <h2>Search Filters</h2>
 
         <form method="post" action="{{ url_for('public_search_page') }}">
+            <label>Status:</label>
+            <select name="status">
+                <option value="">All</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="in-progress">In Progress</option>
+            </select>
+
+            <label>Airline Name</label>
+            <input name="airline_name" placeholder="e.g. Delta">
+
+            <label>Flight Number</label>
+            <input name="flight_num" type="number" placeholder="e.g. 102">
+
             <label>Origin Airport</label>
             <input name="origin" placeholder="e.g. JFK">
+
+            <label>Departure City</label>
+            <input name="dep_city" placeholder="e.g. New York">
 
             <label>Destination Airport</label>
             <input name="destination" placeholder="e.g. LAX">
 
+            <label>Arrival City</label>
+            <input name="arr_city" placeholder="e.g. Los Angeles">
+            
             <label>Date (YYYY-MM-DD)</label>
             <input name="date">
 
@@ -36,19 +55,23 @@
                 <tr>
                     <th>Airline</th>
                     <th>Flight #</th>
-                    <th>Departure</th>
-                    <th>Arrival</th>
-                    <th>Time</th>
+                    <th>Departure Airport</th>
+                    <th>Departure Time</th>
+                    <th>Arrival Airport</th>
+                    <th>Arrival Time</th>
                     <th>Status</th>
+
                 </tr>
+
 
                 {% for f in flights %}
                 <tr>
                     <td>{{ f.airline_name }}</td>
                     <td>{{ f.flight_num }}</td>
                     <td>{{ f.departure_airport }}</td>
-                    <td>{{ f.arrival_airport }}</td>
                     <td>{{ f.departure_time }}</td>
+                    <td>{{ f.arrival_airport }}</td>
+                    <td>{{ f.arrival_time }}</td>
                     <td>{{ f.status }}</td>
                 </tr>
                 {% endfor %}

@@ -67,28 +67,72 @@ def home():
 
 @app.route("/search", methods=["GET", "POST"])
 def public_search_page():
-    """Public search for upcoming flights."""
+    """Public search for upcoming or in-progress flights."""
     flights = []
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
-            sql = "SELECT * FROM flight WHERE status = 'upcoming'"
+            sql = """
+                SELECT f.*, 
+                       dep.airport_city AS dep_city,
+                       arr.airport_city AS arr_city
+                FROM flight f
+                JOIN airport dep ON f.departure_airport = dep.airport_name
+                JOIN airport arr ON f.arrival_airport = arr.airport_name
+                WHERE 1=1
+            """
             params = []
 
-            if request.method == "POST":
-                origin = request.form.get("origin")
-                destination = request.form.get("destination")
-                date = request.form.get("date")
+            # get filters
+            status = request.form.get("status")
+            origin = request.form.get("origin")
+            destination = request.form.get("destination")
+            date = request.form.get("date")
+            dep_city = request.form.get("dep_city")
+            arr_city = request.form.get("arr_city")
+            airline_name = request.form.get("airline_name")
+            flight_num = request.form.get("flight_num")
 
-                if origin:
-                    sql += " AND departure_airport = %s"
-                    params.append(origin)
-                if destination:
-                    sql += " AND arrival_airport = %s"
-                    params.append(destination)
-                if date:
-                    sql += " AND DATE(departure_time) = %s"
-                    params.append(date)
+            # Status filter logic
+            if status:
+                sql += " AND status = %s"
+                params.append(status)
+            else:
+                # Default: show both upcoming + in-progress
+                sql += " AND status IN ('upcoming', 'in-progress')"
+
+            # Other filters
+            if airline_name:
+                sql += " AND f.airline_name = %s"
+                params.append(airline_name)
+
+            # flight number filter
+            if flight_num:
+                sql += " AND f.flight_num = %s"
+                params.append(flight_num)
+
+            # airport filters
+            if origin:
+                sql += " AND f.departure_airport = %s"
+                params.append(origin)
+            if destination:
+                sql += " AND f.arrival_airport = %s"
+                params.append(destination)
+
+            # city filters (using JOINed airport tables)
+            if dep_city:
+                sql += " AND dep.airport_city = %s"
+                params.append(dep_city)
+            if arr_city:
+                sql += " AND arr.airport_city = %s"
+                params.append(arr_city)
+
+            # date filter
+            if date:
+                sql += " AND DATE(f.departure_time) = %s"
+                params.append(date)
+
+            sql += " ORDER BY f.departure_time"
 
             cur.execute(sql, params)
             flights = cur.fetchall()
