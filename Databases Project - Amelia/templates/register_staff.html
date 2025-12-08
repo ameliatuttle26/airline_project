@@ -25,12 +25,15 @@
     }
 
     input, select {
-        width: 100%;
+        width: 100%;          
+        max-width: 100%;       
+        box-sizing: border-box; 
         padding: 10px;
         margin-top: 6px;
         border-radius: 10px;
         border: 1px solid #ccc;
     }
+
 
     .btn {
         margin-top: 20px;
@@ -81,8 +84,13 @@
         <label>Date of Birth:</label>
         <input type="date" name="date_of_birth" required>
 
-        <label>Airline Name:</label>
-        <input type="text" name="airline_name" required>
+       <label>Airline:</label>
+        <select name="airline_name" required>
+            <option value="">-- Select Airline --</option>
+            {% for a in airlines %}
+            <option value="{{ a }}">{{ a }}</option>
+            {% endfor %}
+        </select>
 
         <label>Role:</label>
         <select name="role" required>

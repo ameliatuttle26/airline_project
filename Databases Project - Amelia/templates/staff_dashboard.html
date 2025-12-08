@@ -27,6 +27,7 @@
 .dashboard-card h2 {
     text-align: center;
     margin-bottom: 15px;
+    
 }
 
 label {
@@ -62,7 +63,6 @@ input, select {
     font-size: 14px;
 }
 
-/* NEW: prettier VIEW button */
 .btn-view {
     padding: 6px 12px;
     background-color: #E58A5C;
@@ -79,14 +79,34 @@ input, select {
 }
 
 .table-scroll {
-    overflow-x: auto;
+    max-height: 300px;     
+    overflow-y: auto;
+    border-radius: 12px;   /* round container edges */
 }
+
 
 .styled-table {
     width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
+    border-collapse: separate; /* required */
+    border-spacing: 0;         /* required */
 }
+
+.styled-table thead th:first-child {
+    border-top-left-radius: 12px;
+}
+
+.styled-table thead th:last-child {
+    border-top-right-radius: 12px;
+}
+
+.styled-table tbody tr:last-child td:first-child {
+    border-bottom-left-radius: 12px;
+}
+
+.styled-table tbody tr:last-child td:last-child {
+    border-bottom-right-radius: 12px;
+}
+
 
 .styled-table th, .styled-table td {
     padding: 10px;
@@ -125,7 +145,7 @@ input, select {
 
 <div class="dashboard-sections">
 
-    <!-- 🟦 UPCOMING FLIGHTS -->
+    <!-- upcoming flight -->
     <div class="dashboard-card">
         <h2>Upcoming Flights (Next 30 Days)</h2>
 
@@ -166,7 +186,7 @@ input, select {
 
 
 
-    <!-- 🟦 CUSTOMER HISTORY SEARCH -->
+    <!-- customer history search -->
     <div class="dashboard-card">
         <h2>Customer Flight History</h2>
 
@@ -179,7 +199,7 @@ input, select {
 
 
 
-    <!-- 🟦 ANALYTICS -->
+    <!-- analytics -->
     <div class="dashboard-card">
         <h2>Analytics Dashboard</h2>
         <div style="text-align:center;">
@@ -190,12 +210,12 @@ input, select {
 
 
 
-    <!-- 🟥 ADMIN TOOLS -->
+    <!-- admin tools -->
     {% if is_admin %}
     <div class="dashboard-card">
         <h2>Admin Tools</h2>
 
-        <!-- CREATE FLIGHT -->
+        <!-- create flight -->
         <h3>Create New Flight</h3>
         <form method="post" action="{{ url_for('staff_create_flight') }}">
             <label>Flight Number:</label>

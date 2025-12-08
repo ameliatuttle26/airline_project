@@ -189,19 +189,34 @@ def register_agent():
 # Staff Registration
 @app.route("/register/staff", methods=["GET", "POST"])
 def register_staff():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT airline_name FROM airline")
+            airlines = [row["airline_name"] for row in cur.fetchall()]
+    finally:
+        conn.close()
+
     if request.method == "POST":
         form = request.form
         username = form.get("username")
         pw = form.get("password")
         airline_name = form.get("airline_name")
 
+        # required fields
         if not username or not pw or not airline_name:
             flash("Username, password, and airline are required.")
+            return redirect(url_for("register_staff"))
+
+        # validate airline exists
+        if airline_name not in airlines:
+            flash("Selected airline does not exist. Please choose from the list.")
             return redirect(url_for("register_staff"))
 
         conn = get_db_connection()
         try:
             with conn.cursor() as cur:
+                # avoid duplicates
                 cur.execute("SELECT username FROM airline_staff WHERE username=%s", (username,))
                 if cur.fetchone():
                     flash("Staff user already exists.")
@@ -226,7 +241,7 @@ def register_staff():
         finally:
             conn.close()
 
-    return render_template("register_staff.html")
+    return render_template("register_staff.html", airlines=airlines)
 
 
 # Login
@@ -1249,16 +1264,41 @@ def staff_add_agent_auth():
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
+
+            # validate agent exists
+            cur.execute("SELECT email FROM booking_agent WHERE email=%s", (agent_email,))
+            if not cur.fetchone():
+                flash("This booking agent does not exist.")
+                return redirect(url_for("staff_dashboard"))
+
+            # ensure airline still exists
+            cur.execute("SELECT airline_name FROM airline WHERE airline_name=%s", (airline_name,))
+            if not cur.fetchone():
+                flash("Your airline is not valid.")
+                return redirect(url_for("staff_dashboard"))
+
+            # check if already authorized
+            cur.execute("""
+                SELECT *
+                FROM agent_airline_authorization
+                WHERE agent_email=%s AND airline_name=%s
+            """, (agent_email, airline_name))
+
+            if cur.fetchone():
+                flash("This agent is already authorized for your airline.")
+                return redirect(url_for("staff_dashboard"))
+
+            # insert new authorization
             cur.execute("""
                 INSERT INTO agent_airline_authorization (agent_email, airline_name)
                 VALUES (%s,%s)
             """, (agent_email, airline_name))
-        flash("Agent authorized for this airline.")
+
+            flash("Agent successfully authorized for this airline.")
     finally:
         conn.close()
 
     return redirect(url_for("staff_dashboard"))
-
 
 # run everything
 if __name__ == "__main__":

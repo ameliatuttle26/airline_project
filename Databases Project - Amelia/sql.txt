@@ -8,7 +8,7 @@ INSERT INTO airline (airline_name) VALUES
 
 #Airline staff
 INSERT INTO airline_staff 
-(username, password, first_name, last_name, date_of_birth, airline_name, role)
+(username, password_hash, first_name, last_name, date_of_birth, airline_name, role)
 VALUES
 ('admin_delta', 'admin123', 'Katy', 'Wong', '1990-04-11', 'Delta Air', 'admin'),
 ('ops_delta', 'ops123', 'Eric', 'Chen', '1985-09-17', 'Delta Air', 'operator'),
