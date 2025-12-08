@@ -630,24 +630,46 @@ def customer_purchase(airline_name, flight_num):
 
 
 # View all purchased flights
-@app.route("/customer/purchased_flights")
+@app.route("/customer/purchased_flights", methods=["GET", "POST"])
 @login_required("customer")
 def customer_purchased_flights():
-    """Uses your customer_purchased_flights.html template."""
-    email = session["user_id"]
+    customer_email = session["user_id"]
     conn = get_db_connection()
-    flights = []
+
+    sql = """
+        SELECT f.*
+        FROM purchases p
+        JOIN ticket t ON p.ticket_id = t.ticket_id
+        JOIN flight f ON f.airline_name = t.airline_name
+                      AND f.flight_num = t.flight_num
+        WHERE p.customer_email = %s
+    """
+    params = [customer_email]
+
+    if request.method == "POST":
+        start = request.form.get("start_date")
+        end = request.form.get("end_date")
+        origin = request.form.get("origin")
+        destination = request.form.get("destination")
+
+        if start:
+            sql += " AND DATE(f.departure_time) >= %s"
+            params.append(start)
+        if end:
+            sql += " AND DATE(f.departure_time) <= %s"
+            params.append(end)
+        if origin:
+            sql += " AND f.departure_airport = %s"
+            params.append(origin)
+        if destination:
+            sql += " AND f.arrival_airport = %s"
+            params.append(destination)
+
+    sql += " ORDER BY f.departure_time DESC"
+
     try:
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT f.*
-                FROM ticket t
-                JOIN purchases p ON p.ticket_id = t.ticket_id
-                JOIN flight f ON f.airline_name = t.airline_name
-                              AND f.flight_num = t.flight_num
-                WHERE p.customer_email = %s
-                ORDER BY f.departure_time DESC
-            """, (email,))
+            cur.execute(sql, params)
             flights = cur.fetchall()
     finally:
         conn.close()

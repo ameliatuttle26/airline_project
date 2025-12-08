@@ -124,60 +124,21 @@
 
     <!-- puchased/upcoming flights -->
     <div class="dashboard-card">
-        <h2>Your Purchased Flights</h2>
+    <h2>Your Purchased Flights</h2>
 
-        <!-- filter panel -->
-        <form method="POST" action="{{ url_for('customer_dashboard') }}" style="margin-bottom: 22px;">
-            <input type="hidden" name="form_type" value="flight_filter">
+    <p style="text-align:center; margin-bottom:15px;">
+        View all flights you have purchased, including upcoming and past trips.
+    </p>
 
-            <label>Start Date:</label>
-            <input type="date" name="filter_start">
-
-            <label>End Date:</label>
-            <input type="date" name="filter_end">
-
-            <label>Origin Airport:</label>
-            <input type="text" name="filter_origin" placeholder="e.g. JFK">
-
-            <label>Destination Airport:</label>
-            <input type="text" name="filter_destination" placeholder="e.g. PVG">
-
-            <button type="submit" class="btn">Apply Filters</button>
-        </form>
-
-        {% if flights %}
-        <div class="table-scroll">
-            <table class="styled-table">
-                <thead>
-                    <tr>
-                        <th>Airline</th>
-                        <th>Flight #</th>
-                        <th>From</th>
-                        <th>To</th>
-                        <th>Departure</th>
-                        <th>Arrival</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for f in flights %}
-                    <tr>
-                        <td>{{ f.airline_name }}</td>
-                        <td>{{ f.flight_num }}</td>
-                        <td>{{ f.departure_airport }}</td>
-                        <td>{{ f.arrival_airport }}</td>
-                        <td>{{ f.departure_time }}</td>
-                        <td>{{ f.arrival_time }}</td>
-                        <td>{{ f.status }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <p class="empty-msg">No flights match your filters.</p>
-        {% endif %}
+    <div style="text-align:center;">
+        <a href="{{ url_for('customer_purchased_flights') }}" 
+           class="btn" 
+           style="max-width:300px; display:inline-block; text-decoration:none;">
+            View Purchased Flights →
+        </a>
     </div>
+</div>
+
 
 
     <!-- spending chart -->
