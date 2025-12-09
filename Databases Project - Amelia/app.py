@@ -559,7 +559,6 @@ def customer_search_flights():
 
 
 # Purchase (customer buys)
-# Purchase (customer buys)
 @app.route("/customer/purchase/<airline_name>/<int:flight_num>", methods=["GET", "POST"])
 @login_required("customer")
 def customer_purchase(airline_name, flight_num):
@@ -1286,17 +1285,43 @@ def staff_create_flight():
         return redirect(url_for("staff_dashboard"))
 
     airline_name = session["airline_name"]
-    flight_num = request.form.get("flight_num")
+
+    try:
+        flight_num = int(request.form.get("flight_num"))
+        airplane_id = int(request.form.get("airplane_id"))
+        base_price = float(request.form.get("base_price"))
+    except:
+        flash("Flight number, airplane ID, and base price must be numeric.")
+        return redirect(url_for("staff_dashboard"))
+
     departure_airport = request.form.get("departure_airport")
     arrival_airport = request.form.get("arrival_airport")
     departure_time = request.form.get("departure_time")
     arrival_time = request.form.get("arrival_time")
-    base_price = request.form.get("base_price")
-    airplane_id = request.form.get("airplane_id")
 
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
+
+            # validate airports
+            for a in (departure_airport, arrival_airport):
+                cur.execute(
+                    "SELECT 1 FROM airport WHERE airport_name=%s", (a,)
+                )
+                if not cur.fetchone():
+                    flash(f"Airport '{a}' does not exist.")
+                    return redirect(url_for("staff_dashboard"))
+
+            # validate airplane ownership
+            cur.execute("""
+                SELECT 1 FROM airplane
+                WHERE airline_name=%s AND airplane_id=%s
+            """, (airline_name, airplane_id))
+            if not cur.fetchone():
+                flash("Airplane does not belong to your airline.")
+                return redirect(url_for("staff_dashboard"))
+
+            # insert flight
             cur.execute("""
                 INSERT INTO flight
                 (airline_name, flight_num, departure_airport, departure_time,
@@ -1306,7 +1331,9 @@ def staff_create_flight():
                 airline_name, flight_num, departure_airport, departure_time,
                 arrival_airport, arrival_time, base_price, airplane_id
             ))
-        flash("Flight created.")
+
+        flash("Flight created successfully!")
+
     finally:
         conn.close()
 
@@ -1363,21 +1390,63 @@ def staff_add_airplane():
         flash("You do not have admin permission.")
         return redirect(url_for("staff_dashboard"))
 
-    airline_name = session["airline_name"]
+    airline = session["airline_name"]
+
+    # Get form data
     airplane_id = request.form.get("airplane_id")
+    econ_cap = request.form.get("economy_capacity")
+    bus_cap = request.form.get("business_capacity")
+    first_cap = request.form.get("first_capacity")
+
+    # Convert to integers safely
+    try:
+        airplane_id = int(airplane_id)
+        econ_cap = int(econ_cap)
+        bus_cap = int(bus_cap)
+        first_cap = int(first_cap)
+    except:
+        flash("Airplane ID and seat capacities must be valid numbers.")
+        return redirect(url_for("staff_dashboard"))
 
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
+
+            # Insert airplane
             cur.execute("""
                 INSERT INTO airplane (airline_name, airplane_id)
-                VALUES (%s,%s)
-            """, (airline_name, airplane_id))
-        flash("Airplane added.")
+                VALUES (%s, %s)
+            """, (airline, airplane_id))
+
+            # Insert seat classes only if capacity > 0
+            if econ_cap > 0:
+                cur.execute("""
+                    INSERT INTO seat_class
+                    (airline_name, airplane_id, seat_class_id, seat_capacity, multiplier)
+                    VALUES (%s, %s, 1, %s, 1.0)
+                """, (airline, airplane_id, econ_cap))
+
+            if bus_cap > 0: 
+                cur.execute("""
+                    INSERT INTO seat_class
+                    (airline_name, airplane_id, seat_class_id, seat_capacity, multiplier)
+                    VALUES (%s, %s, 2, %s, 1.5)
+                """, (airline, airplane_id, bus_cap))
+
+            if first_cap > 0:
+                cur.execute("""
+                    INSERT INTO seat_class
+                    (airline_name, airplane_id, seat_class_id, seat_capacity, multiplier)
+                    VALUES (%s, %s, 3, %s, 2.0)
+                """, (airline, airplane_id, first_cap))
+
+        flash("Airplane and seat classes added successfully!")
+
     finally:
         conn.close()
 
     return redirect(url_for("staff_dashboard"))
+
 
 
 @app.route("/staff/add_airport", methods=["POST"])

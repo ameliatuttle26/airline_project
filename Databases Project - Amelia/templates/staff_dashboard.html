@@ -274,12 +274,24 @@ input, select {
         <hr>
 
         <!-- add airplane -->
+    
         <h3>Add Airplane</h3>
         <form method="post" action="{{ url_for('staff_add_airplane') }}">
             <label>Airplane ID:</label>
-            <input name="airplane_id">
+            <input name="airplane_id" required>
+
+            <label>Economy Seat Capacity:</label>
+            <input name="economy_capacity" type="number" min="0" required>
+
+            <label>Business Seat Capacity:</label>
+            <input name="business_capacity" type="number" min="0" required>
+
+            <label>First Class Seat Capacity:</label>
+            <input name="first_capacity" type="number" min="0" required>
+
             <button class="btn">Add Airplane</button>
         </form>
+
 
         <hr>
 
